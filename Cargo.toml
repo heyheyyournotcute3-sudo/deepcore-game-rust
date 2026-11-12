@@ -1,0 +1,113 @@
+[workspace]
+resolver = "3"
+members = ["crates/shared", "crates/server", "crates/client", "crates/lobby"]
+default-members = ["crates/shared", "crates/server", "crates/client", "crates/lobby"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/heyheyyournotcute3-sudo/deepcore"
+
+# --- Pinned dependency set -------------------------------------------------
+# Verified against crates.io on 2026-11-12. Every crate below supports Bevy 0.20.
+# bevy 0.20.1 / bevy_replicon 0.45.5 / bevy_replicon_renet 0.21.0 / bevy_egui 0.43.1
+[workspace.dependencies]
+bevy = { version = "0.20.1", default-features = false, features = [
+    "3d_bevy_render",
+    "ui_api",
+    "ui_bevy_render",
+    "bevy_ui_widgets",
+    "scene",
+    "picking",
+    "async_executor",
+    "bevy_asset",
+    "bevy_log",
+    "bevy_state",
+    "reflect_auto_register",
+    "std",
+    "bevy_winit",
+    "bevy_clipboard",
+    "default_font",
+    "multi_threaded",
+    "x11",
+    "wayland",
+    "custom_cursor",
+    "sysinfo_plugin",
+    "bevy_audio",
+    "vorbis",
+    "bevy_gizmos",
+    "bevy_gizmos_render",
+    "png",
+    "serialize",
+] }
+bevy_math = { version = "0.20.1", default-features = false, features = [
+    "bevy_reflect",
+    "nostd-libm",
+    "serialize",
+] }
+bevy_transform = { version = "0.20.1", default-features = false, features = [
+    "bevy-support",
+    "bevy_reflect",
+    "serialize",
+] }
+bevy_replicon = "0.45.5"
+bevy_replicon_renet = "0.21.0"
+bevy_egui = "0.43.1"
+
+serde = { version = "1.0.229", features = ["derive"] }
+ron = "0.12.3"
+postcard = { version = "1.1.3", features = ["alloc"] }
+zstd = "0.14.3"
+noise = "0.9.0"
+rand = "0.10.3"
+rand_chacha = "0.10.0"
+tracing = "0.1"
+thiserror = "2.0"
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+
+# server-only persistence + web
+axum = "0.8.9"
+tokio = { version = "1", features = ["full"] }
+sqlx = { version = "0.9.0", default-features = false, features = [
+    "runtime-tokio",
+    "sqlite",
+    "macros",
+    "migrate",
+    "derive",
+] }
+argon2 = "0.6.0"
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+# Voxel maths is full of intentional integer/float conversions between world coordinates,
+# chunk coordinates, local indices and GPU-ready floats. Every one is bounded by the world
+# size constants, so these pedantic lints are noise here; everything else stays at warn.
+pedantic = { level = "warn", priority = -1 }
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+cast_sign_loss = "allow"
+cast_precision_loss = "allow"
+cast_lossless = "allow"
+# Pedantic style preferences that do not improve game code.
+trivially_copy_pass_by_ref = "allow"
+needless_pass_by_value = "allow"
+
+
+# Dependencies are optimised even in dev builds so the game runs at speed
+# while our own crates still compile quickly.
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

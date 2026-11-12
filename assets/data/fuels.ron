@@ -1,0 +1,5 @@
+[
+    (item: "coal", burn_seconds: 80.0, heat: 1.00),
+    (item: "timber", burn_seconds: 20.0, heat: 0.60),
+    (item: "graphite", burn_seconds: 120.0, heat: 1.40),
+]

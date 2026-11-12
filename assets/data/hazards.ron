@@ -1,0 +1,8 @@
+[
+    Darkness,
+    Flooding(pocket_chance: 0.010, max_volume: 512),
+    Gas(pocket_chance: 0.012, oxygen_per_sec: 6.0),
+    Heat(extra_degrees: 25.0),
+    CaveIn(max_span: 7),
+    Radiation(dose_per_sec: 0.4),
+]

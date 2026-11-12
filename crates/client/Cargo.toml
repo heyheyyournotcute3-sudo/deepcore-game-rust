@@ -1,0 +1,27 @@
+[package]
+name = "deepcore_client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "client"
+path = "src/main.rs"
+
+[dependencies]
+deepcore_shared = { path = "../shared" }
+bevy = { workspace = true }
+bevy_replicon = { workspace = true }
+bevy_replicon_renet = { workspace = true }
+bevy_egui = { workspace = true }
+serde = { workspace = true }
+postcard = { workspace = true }
+zstd = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+
+[lints]
+workspace = true
