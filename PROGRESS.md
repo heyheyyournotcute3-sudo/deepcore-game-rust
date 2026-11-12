@@ -3,7 +3,7 @@
 > Continuation file. A future session (possibly a different model) must be able to resume from
 > this file alone. Update it at the end of every milestone.
 
-## Status: M0 complete (workspace + skeleton). M1 next.
+## Status: M1 complete (voxel world, local single-process). M2 next (multiplayer).
 
 ## Pinned stack (verified 2026-11-12 against crates.io and the actual crate sources)
 | Crate | Version |
@@ -48,6 +48,67 @@ Regenerate RON from the authoring script: `python3 tools/gen_content.py`.
   client binary build was ~17 min the first time. Incremental checks are seconds.
 
 ## Milestone log
+
+### M1 — voxel world (local, single process) — DONE
+Built:
+- `shared/voxel`: `ChunkPos`/`BlockPos` maths, palette-compressed `Chunk` (u8 palette widening to
+  u16), raycast (Amanatides & Woo) with tests.
+- `shared/worldgen`: all six layers, fillers, caves, deterministic ore veins placed in world space
+  so veins cross chunk borders, water/gas pockets, trees, camp platform. Fully seed-deterministic.
+- `shared/movement`: AABB-vs-voxel collision, per-axis resolution, step-up, ladders, sub-stepping
+  so fast falls cannot tunnel. World-space `MoveIntent` (no camera dependency).
+- `shared/crafting::mining`: break-time formula `hardness / (speed * power)`, tier gating, tick
+  rounding.
+- `shared/simulation`: headless harness driving the real generator, storage, physics and mining
+  rules. This is how M1's acceptance criteria are tested.
+- `client`: procedural 16×16 atlas from `blocks.ron` colours/patterns, greedy mesher with
+  cross-chunk face culling (capped at `MAX_MERGE = 8`), incremental chunk streaming, first-person
+  controller (WASD/sprint/crouch/jump, mouse look, Esc releases the cursor), block targeting
+  raycast with a selection box, mining with hardness/tier rules and a "Too hard — needs Tier N"
+  warning, block placing, 9-slot hotbar, depth meter with layer name, crosshair.
+- `client/examples/ui_smoke.rs`: minimal Bevy-UI smoke test kept in the tree so UI regressions
+  after a Bevy upgrade can be attributed quickly.
+
+Verified:
+- `scripts/check.sh` green: 67 tests (46 shared unit + 11 content + 10 client).
+- **M1 acceptance (automated)**: `simulation::tests::steel_pickaxe_digs_through_layers_one_and_two`
+  digs from the surface with the starting steel pickaxe, passes layer 1 and layer 2, and is
+  stopped by **layer-3 granite** — and `hardened_pickaxe_passes_the_granite_that_stopped_steel`
+  proves tier 2 gets through.
+- Bedrock floor is never broken (`bedrock_floor_is_never_broken`).
+- Client renders under Xvfb/llvmpipe with the HUD visible (screenshot-verified): depth meter,
+  layer name, hotbar with items, crosshair.
+- NOT verified here: 60 FPS at view radius 6 on a mid-range GPU. This box has no GPU (llvmpipe
+  software rendering), so the frame-rate criterion cannot be measured in this environment.
+
+Bugs found and fixed during M1 (each now covered by a test or documented):
+- **Caves were carved from depth 2 upward, hollowing the surface** so the camp floated and the
+  player spawned over a void. Caves now start at `MIN_CAVE_DEPTH = 8`.
+- **Spawn height was 2 blocks above the surface**, so the player fell on join. Spawn is now
+  `surface_y + 1` (feet exactly on the surface block).
+- **`AmbientLight` requires `Camera` in Bevy 0.20.** Spawning it as a free entity created a stray
+  bare `Camera`; Bevy then selected that as the default UI camera, whose viewport is 0×0, so the
+  entire HUD laid out to nothing and never rendered. Fixed by using the `GlobalAmbientLight`
+  resource. This cost the longest debug session of the milestone — the symptom (HUD entities
+  exist but have no `ComputedNode`) pointed at UI, not lighting.
+- Greedy quads sample one atlas tile, so merge size is capped at 8 blocks and UVs stay inside the
+  tile; unbounded merging smeared the texture across whole floors.
+- `BorderColor` is a struct with four sides in Bevy 0.20 (`BorderColor::all(color)`), not a tuple.
+- `TextFont::font_size` is a `FontSize` enum (`FontSize::Px(..)`), not an `f32`.
+- Streaming 800+ chunks in one frame starved the rest of the schedule; streaming is now bounded to
+  a few nearest chunks per frame.
+- `Single<&mut Text, With<A>>` + `Single<&mut Text, With<B>>` in one system panics (B0001);
+  needs disjoint `Without<..>` filters.
+- `#[require(Camera)]`-style component requirements mean "spawn a lighting entity" can silently
+  create a camera. Check `#[require]` before spawning any Bevy component standalone.
+
+Deferred / known issues:
+- Networking, inventory, machines: later milestones. Nothing stubbed.
+- Textures: one atlas tile per merged quad (capped merge). Upgrade path: custom `Material` with
+  `fract()` UVs or a padded atlas with per-quad UV scaling.
+- The selection box is a translucent cube, not a true wireframe.
+- `client/examples/ui_smoke.rs` and `shared/simulation.rs` exist to make UI and gameplay
+  regressions testable without a GPU.
 
 ### M0 — workspace and skeleton — DONE
 Built:

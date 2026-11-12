@@ -81,6 +81,12 @@ impl ChunkPos {
         dx * dx + dy * dy + dz * dz
     }
 
+    /// Offset by a face direction.
+    #[must_use]
+    pub const fn offset_dir(self, dir: Dir) -> Self {
+        Self::new(self.x + dir.dx(), self.y + dir.dy(), self.z + dir.dz())
+    }
+
     /// Iterates the six neighbouring chunk positions.
     #[must_use]
     pub fn neighbours(self) -> [Self; 6] {

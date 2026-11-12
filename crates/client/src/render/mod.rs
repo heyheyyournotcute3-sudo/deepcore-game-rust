@@ -4,4 +4,7 @@ pub mod atlas;
 pub mod mesh;
 
 pub use atlas::build_atlas;
-pub use mesh::{SingleChunk, build_mesh};
+
+pub mod stream;
+
+pub use stream::{ChunkRenderPlugin, DirtyChunks, ViewConfig};

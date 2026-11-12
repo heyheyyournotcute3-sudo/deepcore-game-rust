@@ -26,11 +26,15 @@ pub trait Neighbour {
 }
 
 /// Neighbour view over a single chunk; outside is air.
+///
+/// Used by the tests and by anything that needs a quick standalone mesh.
+#[cfg(test)]
 pub struct SingleChunk<'a> {
     /// The chunk being meshed.
     pub chunk: &'a Chunk,
 }
 
+#[cfg(test)]
 impl Neighbour for SingleChunk<'_> {
     fn block(&self, x: i32, y: i32, z: i32) -> BlockId {
         if x < 0

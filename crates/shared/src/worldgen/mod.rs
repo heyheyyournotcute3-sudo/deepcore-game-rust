@@ -13,6 +13,9 @@ use rand_chacha::ChaCha8Rng;
 use crate::content::{ItemCategory, Registry};
 use crate::voxel::{BlockId, CHUNK_SIZE, Chunk, ChunkPos, SURFACE_Y, WORLD_SIZE_Y};
 
+/// Caves never form above this depth, so the surface stays solid and the camp is supported.
+pub const MIN_CAVE_DEPTH: u32 = 8;
+
 /// Salt constants keep the different noise fields independent.
 const SALT_CAVE: u64 = 0x9E37_79B9_7F4A_7C15;
 const SALT_ORE: u64 = 0xC2B2_AE3D_27D4_EB4F;
@@ -82,10 +85,13 @@ impl WorldGen {
         self.surface_y
     }
 
-    /// Where a player spawns: just above the camp surface at the world centre.
+    /// Where a player spawns: standing on the camp surface at the world centre.
+    ///
+    /// The body's feet sit at `y`, so spawning at `surface_y + 1` puts the player exactly on
+    /// top of the surface block instead of dropping them from a height.
     #[must_use]
     pub fn spawn_point(&self) -> Vec3 {
-        Vec3::new(512.5, (self.surface_y + 2) as f32 + 0.001, 512.5)
+        Vec3::new(512.5, (self.surface_y + 1) as f32, 512.5)
     }
 
     /// Registry access, for callers that need block stats.
@@ -229,8 +235,12 @@ impl WorldGen {
             }
         }
 
-        // Caves: two noise fields multiplied, so tunnels form where both are near zero.
-        if depth >= 2 {
+        // Caves: two noise fields combined, so tunnels form where both are near zero.
+        //
+        // Caves are kept well below the surface: carving them from depth 2 leaves the topsoil
+        // floating over voids and the camp unsupported. Underground entrances are reached by
+        // digging, which is the intended loop.
+        if depth >= MIN_CAVE_DEPTH {
             let c1 = self.cave.get([x as f64 * 0.035, y as f64 * 0.05, z as f64 * 0.035]);
             let c2 = self.cave2.get([x as f64 * 0.035, y as f64 * 0.05, z as f64 * 0.035]);
             let combined = (c1 * c1 + c2 * c2).sqrt();

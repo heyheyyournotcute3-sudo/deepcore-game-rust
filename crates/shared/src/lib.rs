@@ -5,7 +5,9 @@
 //! displays with it, and the tests verify it without opening a window.
 
 pub mod content;
+pub mod crafting;
 pub mod movement;
+pub mod simulation;
 pub mod voxel;
 pub mod worldgen;
 

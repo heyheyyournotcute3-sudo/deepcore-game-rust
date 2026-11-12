@@ -1,12 +1,14 @@
 //! Deepcore client.
 //!
-//! Windowed game: first-person view of the voxel mine, procedural textures, and (from M2) the
-//! network connection to a server. The client predicts only its own movement and shows
-//! everything else as the server reports it.
+//! Windowed game: a first-person view of the voxel mine with procedural textures, a HUD, and
+//! (from M2) the network connection to a server. The client predicts only its own movement and
+//! shows everything else as the server reports it.
 
+mod hud;
+mod input;
+mod player;
 mod render;
-
-use std::collections::HashMap;
+mod world;
 
 use bevy::prelude::*;
 use bevy::window::{PresentMode, WindowResolution};
@@ -14,20 +16,19 @@ use clap::Parser;
 
 use deepcore_shared::Registry;
 use deepcore_shared::content::{default_content_dir, load_dir};
-use deepcore_shared::voxel::{BlockId, CHUNK_SIZE, Chunk, ChunkPos};
-use deepcore_shared::worldgen::WorldGen;
 
-use render::{SingleChunk, build_atlas, build_mesh};
+use render::{ChunkRenderPlugin, ViewConfig};
+use world::ClientWorld;
 
 /// Command line options for the client.
 #[derive(Debug, Parser, Resource)]
 #[command(name = "client", about = "Deepcore client")]
 pub struct Cli {
-    /// Server address to join, e.g. `127.0.0.1:47000`. Empty starts a local preview world.
+    /// Server address to join, e.g. `127.0.0.1:47000`. Empty plays the local preview world.
     #[arg(long, default_value = "")]
     pub connect: String,
     /// World seed for the local preview world.
-    #[arg(long, default_value_t = 0x0D33C0)]
+    #[arg(long, default_value_t = 0x000D_33C0)]
     pub seed: u64,
     /// Directory holding the RON content files.
     #[arg(long)]
@@ -55,19 +56,19 @@ pub struct Content {
     pub hash: u64,
 }
 
-/// Preview chunks generated locally before a network session exists.
-#[derive(Resource, Default)]
-pub struct PreviewWorld {
-    /// Loaded chunks by position.
-    pub chunks: HashMap<ChunkPos, Chunk>,
-}
+/// World seed, used by the local preview world generator.
+#[derive(Resource, Debug, Clone, Copy)]
+pub struct Seed(pub u64);
 
-/// Frame timing readout, refreshed once a second.
-#[derive(Resource, Default)]
-struct FrameStats {
+/// Frame timing, refreshed once a second for the F3 overlay.
+#[derive(Resource, Default, Debug)]
+pub struct FrameStats {
+    /// Frames counted in the current window.
     frames: u32,
+    /// Seconds elapsed in the current window.
     seconds: f32,
-    fps: f32,
+    /// Smoothed frames per second.
+    pub fps: f32,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -78,6 +79,10 @@ fn main() -> anyhow::Result<()> {
         let joined: Vec<String> = errors.iter().map(ToString::to_string).collect();
         anyhow::anyhow!("content failed to load:\n  {}", joined.join("\n  "))
     })?;
+
+    let view_distance = cli.view_distance.clamp(1, 16);
+    let seed = cli.seed;
+    let exit_after = cli.exit_after;
 
     let mut app = App::new();
     app.add_plugins(
@@ -94,108 +99,33 @@ fn main() -> anyhow::Result<()> {
             .set(ImagePlugin::default_nearest()),
     )
     .insert_resource(Content { registry, hash: loaded.hash })
-    .insert_resource(cli)
-    .init_resource::<PreviewWorld>()
+    .insert_resource(Seed(seed))
+    .insert_resource(Cli { exit_after, ..cli })
+    .insert_resource(ViewConfig { radius: view_distance, vertical: 4 })
+    .init_resource::<ClientWorld>()
     .init_resource::<FrameStats>()
-    .add_systems(Startup, (setup_world, setup_camera).chain())
+    .add_plugins((ChunkRenderPlugin, player::PlayerPlugin, hud::HudPlugin, input::InputPlugin))
+    .add_systems(Startup, setup_environment)
     .add_systems(Update, (update_frame_stats, enforce_run_limit));
 
     app.run();
     Ok(())
 }
 
-/// Builds the atlas, the world material and a small preview world around the spawn.
-fn setup_world(
-    mut commands: Commands,
-    content: Res<Content>,
-    cli: Res<Cli>,
-    mut images: ResMut<Assets<Image>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut preview: ResMut<PreviewWorld>,
-) {
-    let atlas = build_atlas(&content.registry, &mut images);
-    // Double-sided: from inside a tunnel the player sees the back of the surrounding faces,
-    // and greedy meshing emits one quad per visible face, so back faces must render.
-    let material = materials.add(StandardMaterial {
-        base_color_texture: Some(atlas.image.clone()),
-        perceptual_roughness: 0.95,
-        metallic: 0.0,
-        cull_mode: None,
-        ..default()
-    });
-
-    let generator = WorldGen::new(cli.seed, content.registry.clone());
-    let spawn = generator.spawn_point();
-    let centre = ChunkPos::from_block(deepcore_shared::voxel::BlockPos::from_world(spawn));
-
-    let transparent: Vec<bool> =
-        content.registry.blocks.iter().map(|b| b.def.transparent).collect();
-    let is_transparent = move |b: BlockId| transparent.get(b.0 as usize).copied().unwrap_or(false);
-    let atlas_for_uv = atlas.clone();
-    let uv_of = move |b: BlockId| atlas_for_uv.uv_for(b);
-
-    // Generate and mesh a small area around the camp so the first frame is not empty.
-    let radius = cli.view_distance.min(3);
-    let mut mesh_count = 0;
-    for dy in -1..=0 {
-        for dz in -radius..=radius {
-            for dx in -radius..=radius {
-                let pos = ChunkPos::new(centre.x + dx, centre.y + dy, centre.z + dz);
-                if !pos.in_bounds() {
-                    continue;
-                }
-                let chunk = generator.generate(pos);
-                let mesh = build_mesh(&SingleChunk { chunk: &chunk }, &is_transparent, &uv_of);
-                if !mesh.quads.is_empty() {
-                    commands.spawn((
-                        Mesh3d(meshes.add(mesh.mesh)),
-                        MeshMaterial3d(material.clone()),
-                        Transform::from_translation(Vec3::new(
-                            (pos.x * CHUNK_SIZE as i32) as f32,
-                            (pos.y * CHUNK_SIZE as i32) as f32,
-                            (pos.z * CHUNK_SIZE as i32) as f32,
-                        )),
-                    ));
-                    mesh_count += 1;
-                }
-                preview.chunks.insert(pos, chunk);
-            }
-        }
-    }
-
-    info!(
-        "atlas {}px for {} blocks, {mesh_count} preview chunk meshes, spawn {spawn:?}",
-        atlas.size,
-        content.registry.blocks.len()
-    );
-
-    commands.insert_resource(atlas);
-}
-
-/// Spawns the camera, the sun and the ambient light.
-fn setup_camera(mut commands: Commands, content: Res<Content>, cli: Res<Cli>) {
-    let generator = WorldGen::new(cli.seed, content.registry.clone());
-    let spawn = generator.spawn_point();
-
-    let eye = spawn + Vec3::new(-14.0, 9.0, 18.0);
+/// Sun, sky and ambient light.
+fn setup_environment(mut commands: Commands) {
     commands.spawn((
-        Camera3d::default(),
-        Transform::from_translation(eye).looking_at(spawn + Vec3::new(0.0, -2.0, 0.0), Vec3::Y),
-    ));
-
-    // Sunlight: the surface camp must be clearly lit.
-    commands.spawn((
-        DirectionalLight { illuminance: 12_000.0, shadow_maps_enabled: true, ..default() },
+        DirectionalLight { illuminance: 11_000.0, shadow_maps_enabled: true, ..default() },
         Transform::from_xyz(0.0, 0.0, 0.0).looking_to(Vec3::new(-0.4, -1.0, -0.3), Vec3::Y),
     ));
-    // AmbientLight is a component in Bevy 0.20, not a resource.
-    commands.spawn(AmbientLight {
+    // `AmbientLight` is a *camera override* in Bevy 0.20 (it requires `Camera`), so spawning it
+    // as a free entity creates a stray camera that Bevy then picks as the UI camera. The global
+    // resource is the correct way to light the whole scene.
+    commands.insert_resource(GlobalAmbientLight {
         color: Color::srgb(0.55, 0.62, 0.75),
-        brightness: 220.0,
+        brightness: 260.0,
         ..default()
     });
-
     commands.insert_resource(ClearColor(Color::srgb(0.42, 0.56, 0.72)));
 }
 
@@ -205,13 +135,12 @@ fn update_frame_stats(time: Res<Time>, mut stats: ResMut<FrameStats>) {
     stats.seconds += time.delta_secs();
     if stats.seconds >= 1.0 {
         stats.fps = stats.frames as f32 / stats.seconds;
-        debug!("{:.0} fps", stats.fps);
         stats.frames = 0;
         stats.seconds = 0.0;
     }
 }
 
-/// Closes the app after `--exit-after` seconds so smoke tests can run headless-ish.
+/// Closes the app after `--exit-after` seconds so smoke tests terminate on their own.
 fn enforce_run_limit(cli: Res<Cli>, time: Res<Time>, mut exit: MessageWriter<AppExit>) {
     if cli.exit_after > 0 && time.elapsed_secs() >= cli.exit_after as f32 {
         info!("client run limit reached; exiting");
