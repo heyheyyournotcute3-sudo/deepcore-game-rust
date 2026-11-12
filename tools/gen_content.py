@@ -252,6 +252,8 @@ I("electric_lamp", "Electric Lamp", 64, "Block")
 I("ladder", "Ladder", 64, "Block")
 I("timber_support", "Timber Support", 64, "Block")
 I("steel_support", "Steel Support", 64, "Block")
+I("rail", "Rail", 64, "Block")
+I("minecart", "Minecart", 1, "Machine", "Hauls ore along rails back to the Base.")
 I("lead_block", "Lead Block", 64, "Block")
 I("shielding_block", "Shielding Block", 64, "Block")
 I("graphite_moderator_block", "Graphite Moderator Block", 64, "Block")
@@ -304,6 +306,23 @@ M("reactor", "Reactor", (5, 5, 5), "None", 6, 4,
   [("reactor_casing", 40), ("lead_plate", 30), ("graphite_moderator", 12)], "reactor_engineering", multiblock=True)
 M("cooling_pool", "Cooling Pool", (3, 1, 3), "None", 2, 2, [("concrete", 12), ("lead_plate", 6)], "waste_handling")
 M("waste_vault", "Waste Vault", (3, 3, 3), "None", 9, 0, [("lead_plate", 20), ("concrete", 20), ("shielding_plate", 8)], "waste_handling", multiblock=True)
+M("mine_lift", "Mine Lift", (2, 2, 2), "Electric(kw: 30)", 0, 0,
+  [("steel_plate", 8), ("steel_rod", 12), ("bronze_gear", 4)], "mine_transport", modules=1)
+M("conveyor", "Conveyor", (1, 1, 1), "Electric(kw: 2)", 1, 1,
+  [("steel_plate", 1), ("bronze_gear", 1)], "conveyor_logistics")
+M("item_pipe", "Item Pipe", (1, 1, 1), "None", 1, 1,
+  [("copper_pipe", 2)], "conveyor_logistics")
+M("cable", "Cable", (1, 1, 1), "None", 0, 0, [("copper_wire", 4)], "power_grid")
+M("pole", "Power Pole", (1, 3, 1), "None", 0, 0,
+  [("steel_rod", 4), ("copper_wire", 2)], "power_grid")
+M("scram_panel", "Scram Panel", (1, 2, 1), "Electric(kw: 5)", 0, 0,
+  [("circuit_mk2", 2), ("steel_plate", 4), ("control_rod", 1)], "scram_system")
+M("reactor_console", "Reactor Console", (2, 1, 1), "Electric(kw: 10)", 0, 0,
+  [("circuit_mk2", 3), ("glass", 4), ("steel_plate", 6)], "reactor_console_tech")
+M("coolant_pump", "Coolant Pump", (2, 2, 2), "Electric(kw: 60)", 1, 0,
+  [("stainless_steel", 4), ("copper_pipe", 8), ("bearing", 2)], "coolant_loop", modules=1)
+M("heat_exchanger", "Heat Exchanger", (2, 2, 2), "None", 1, 1,
+  [("stainless_steel", 6), ("copper_pipe", 10)], "coolant_loop", modules=1)
 M("nuclear_drill_charger", "Core Cell Charger", (1, 1, 1), "Electric(kw: 200)", 1, 1, [("circuit_mk2", 4), ("lead_plate", 6)], "reactor_engineering")
 
 # machine items (category Machine)
@@ -393,6 +412,17 @@ R("build_chemical_plant", "workbench", 20.0, [("steel_plate", 16), ("glass", 10)
 R("build_alloy_furnace", "workbench", 20.0, [("steel_plate", 14), ("fire_brick", 20)], [("alloy_furnace", 1)], "advanced_metallurgy")
 R("build_machine_shop", "workbench", 22.0, [("steel_plate", 18), ("bearing", 4)], [("machine_shop", 1)], "advanced_metallurgy")
 R("build_rare_earth_separator", "workbench", 20.0, [("steel_plate", 10), ("rare_earth_magnet", 2)], [("rare_earth_separator", 1)], "rare_earths")
+R("build_mine_lift", "workbench", 16.0, [("steel_plate", 8), ("steel_rod", 12), ("bronze_gear", 4)], [("mine_lift", 1)], "mine_transport")
+R("build_conveyor", "workbench", 4.0, [("steel_plate", 1), ("bronze_gear", 1)], [("conveyor", 1)], "conveyor_logistics")
+R("build_item_pipe", "workbench", 3.0, [("copper_pipe", 2)], [("item_pipe", 1)], "conveyor_logistics")
+R("build_cable", "workbench", 2.0, [("copper_wire", 4)], [("cable", 1)], "power_grid")
+R("build_pole", "workbench", 5.0, [("steel_rod", 4), ("copper_wire", 2)], [("pole", 1)], "power_grid")
+R("build_scram_panel", "workbench", 14.0, [("circuit_mk2", 2), ("steel_plate", 4), ("control_rod", 1)], [("scram_panel", 1)], "scram_system")
+R("build_reactor_console", "workbench", 14.0, [("circuit_mk2", 3), ("glass", 4), ("steel_plate", 6)], [("reactor_console", 1)], "reactor_console_tech")
+R("build_coolant_pump", "workbench", 16.0, [("stainless_steel", 4), ("copper_pipe", 8), ("bearing", 2)], [("coolant_pump", 1)], "coolant_loop")
+R("build_heat_exchanger", "workbench", 16.0, [("stainless_steel", 6), ("copper_pipe", 10)], [("heat_exchanger", 1)], "coolant_loop")
+R("build_rail", "workbench", 2.0, [("steel_rod", 2)], [("rail", 4)], "mine_transport")
+R("build_minecart", "workbench", 6.0, [("iron_plate", 4), ("bronze_gear", 2)], [("minecart", 1)], "mine_transport")
 R("build_decon_shower", "workbench", 10.0, [("steel_plate", 6), ("copper_pipe", 4)], [("decon_shower", 1)], "hazard_gear")
 
 # steam era processing
@@ -496,10 +526,31 @@ T("ore_processing", "Ore Processing", 2, ["steam_power"],
 T("logistics", "Logistics", 2, ["steam_power"],
   [("steel_rod", 20), ("timber", 40), ("bronze_gear", 10)],
   ["steel_rod", "timber_support", "steel_support"], "Rails, minecarts and a lift to haul ore home.")
+T("mine_transport", "Mine Transport", 2, ["logistics"],
+  [("steel_rod", 24), ("iron_plate", 12), ("bronze_gear", 6)],
+  ["mine_lift", "minecart", "rail"], "Rails, minecarts and a powered lift to haul ore to the Base.")
+T("conveyor_logistics", "Conveyor Logistics", 3, ["logistics"],
+  [("steel_plate", 20), ("bronze_gear", 10), ("copper_pipe", 8)],
+  ["conveyor", "item_pipe"], "Conveyors and item pipes link machines into automated lines.")
 T("electricity", "Electricity", 3, ["ore_processing"],
   [("steel_plate", 30), ("copper_wire", 60), ("bronze_gear", 12)],
   ["steam_turbine", "generator", "battery_bank", "arc_furnace", "electrolysis_cell",
    "circuit_assembler", "charging_station", "electric_lamp", "module_speed"], "Turn steam into kilowatts and light the deep tunnels.")
+T("power_grid", "Power Grid", 3, ["electricity"],
+  [("copper_wire", 40), ("steel_rod", 20)],
+  ["cable", "pole"], "Cables and poles carry kilowatts between machines.")
+T("arc_smelting", "Arc Smelting", 3, ["electricity"],
+  [("steel_plate", 16), ("graphite", 10), ("copper_wire", 20)],
+  ["arc_furnace", "silicon"], "Electric arc furnaces smelt faster and reduce quartz to silicon.")
+T("aluminium_refining", "Aluminium Refining", 3, ["arc_smelting"],
+  [("raw_bauxite", 20), ("steel_plate", 10)],
+  ["electrolysis_cell", "aluminium_ingot"], "Electrolysis turns bauxite into aluminium.")
+T("electronics", "Electronics", 3, ["arc_smelting"],
+  [("silicon", 10), ("copper_wire", 30), ("glass", 8)],
+  ["circuit_assembler", "circuit_mk1"], "Assemble silicon and wire into circuits.")
+T("battery_storage", "Battery Storage", 3, ["power_grid"],
+  [("lead_plate", 16), ("sulfuric_acid", 6)],
+  ["battery_bank", "battery_pack"], "Lead-acid packs buffer the grid and power portable tools.")
 T("deep_safety", "Deep Safety", 3, ["electricity"],
   [("steel_plate", 20), ("copper_wire", 40), ("glass", 20)],
   ["vent_fan", "electric_pump", "ore_scanner", "headlamp_mk2"], "Vent gas, pump water, and scan for ore.")
@@ -510,6 +561,15 @@ T("advanced_metallurgy", "Advanced Metallurgy", 4, ["chemistry"],
   [("steel_ingot", 40), ("nickel_ingot", 10), ("chromium_ingot", 6)],
   ["alloy_furnace", "machine_shop", "stainless_steel", "tungsten_carbide", "tungsten_drill"],
   "Stainless steel and tungsten carbide. Opens the Deep Crust.")
+T("steel_alloys", "Steel Alloys", 4, ["advanced_metallurgy"],
+  [("steel_ingot", 30), ("nickel_ingot", 8), ("chromium_ingot", 4)],
+  ["stainless_steel", "alloy_furnace"], "Nickel and chromium turn steel into stainless.")
+T("tungsten_tooling", "Tungsten Tooling", 4, ["advanced_metallurgy"],
+  [("raw_tungsten", 12), ("graphite", 8)],
+  ["tungsten_carbide", "tungsten_drill"], "Carbide bits cut the Deep Crust.")
+T("chemical_feedstock", "Chemical Feedstock", 4, ["chemistry"],
+  [("sulfur", 20), ("fluorite", 10), ("salt", 20)],
+  ["sulfuric_acid", "fluorine_compound"], "Bulk acids and fluorine compounds for refining.")
 T("hazard_gear", "Hazard Gear", 4, ["advanced_metallurgy"],
   [("steel_plate", 20), ("copper_pipe", 10), ("sealant", 10)],
   ["cooling_suit", "respirator", "hazmat_suit", "geiger_counter", "decon_shower", "shielding_plate"],
@@ -533,6 +593,18 @@ T("fuel_fabrication", "Fuel Fabrication", 5, ["enrichment"],
 T("reactor_engineering", "Reactor Engineering", 5, ["fuel_fabrication", "advanced_metallurgy"],
   [("reactor_casing", 20), ("control_rod", 4), ("graphite_moderator", 10)],
   ["reactor", "nuclear_drill_charger"], "Build a stable reactor and a scram panel.")
+T("reactor_console_tech", "Reactor Console", 5, ["reactor_engineering"],
+  [("circuit_mk2", 4), ("glass", 10), ("steel_plate", 12)],
+  ["reactor_console"], "A console to run the reactor and watch its core temperature.")
+T("scram_system", "Scram System", 5, ["reactor_console_tech"],
+  [("control_rod", 4), ("circuit_mk2", 3), ("steel_plate", 10)],
+  ["scram_panel", "control_rod"], "An automatic scram panel prevents a meltdown.")
+T("coolant_loop", "Coolant Loop", 5, ["reactor_engineering"],
+  [("stainless_steel", 8), ("copper_pipe", 20), ("bearing", 4)],
+  ["coolant_pump", "heat_exchanger"], "Pump coolant through the core and recover the heat.")
+T("enrichment_cascade", "Enrichment Cascade", 5, ["enrichment"],
+  [("stainless_rotor", 6), ("rare_earth_magnet", 12), ("circuit_mk2", 6)],
+  ["centrifuge", "stainless_rotor"], "Longer cascades enrich faster; each block adds throughput.")
 T("waste_handling", "Waste Handling", 5, ["reactor_engineering"],
   [("waste_cask", 4), ("lead_plate", 20)],
   ["cooling_pool", "waste_vault"], "Cool and vault spent fuel before it poisons the Base.")

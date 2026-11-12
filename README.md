@@ -13,10 +13,13 @@ The server is authoritative for every rule. Clients predict only their own movem
 
 ## Status
 
-**M0 (workspace and skeleton) complete.** The workspace builds, the client renders the mine, the
-server runs headless at 30 Hz, and the full content database (55 blocks, 166 items, 129 recipes,
-35 machines, 18 tech nodes, 6 layers) loads and validates. See [PROGRESS.md](PROGRESS.md) for the
-milestone log and known issues, and [docs/PLAN.md](docs/PLAN.md) for the architecture.
+**M1 (voxel world, local) complete.** The workspace builds, the client renders and meshes the
+mine with a first-person controller, mining with tool-tier gates, a hotbar and a depth meter, and
+the server runs headless at 30 Hz. The content database (55 blocks, 177 items, 140 recipes,
+44 machines, 32 tech nodes, 6 layers) loads and validates against Section 6's targets.
+
+Multiplayer (M2) is next. See [PROGRESS.md](PROGRESS.md) for the milestone log, known issues and
+explicitly deferred work, and [docs/PLAN.md](docs/PLAN.md) for the architecture.
 
 ## Quick start
 
@@ -59,7 +62,8 @@ crates/client/   windowed game binary (`client`): rendering, input, prediction, 
 crates/lobby/    axum + sqlx accounts and server browser (M10)
 assets/data/     ALL content as RON: blocks, items, machines, recipes, tech tree, layers, fuels,
                  hazards. This is the single source of truth.
-tools/           gen_content.py authors the RON files; atlas_gen builds the texture atlas
+tools/           gen_content.py authors the RON files in assets/data/
+                 (the block texture atlas is generated at runtime, see below)
 ```
 
 ## Adding content
@@ -84,6 +88,12 @@ Regenerating the data files from the authoring script:
 ```bash
 python3 tools/gen_content.py
 ```
+
+## Placeholder art
+
+There are no downloaded assets. Block textures are generated at runtime: every 16×16 tile is
+painted from the block's `color` and `pattern` in `blocks.ron` and packed into an atlas by
+`crates/client/src/render/atlas.rs`. Machines are built from Bevy primitives.
 
 ## Design rules the code follows
 

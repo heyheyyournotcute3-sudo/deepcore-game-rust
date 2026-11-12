@@ -46,16 +46,14 @@ pub struct HotbarSlot {
 
 impl LocalPlayer {
     /// Creates a player standing at `spawn`.
+    ///
+    /// The starting loadout is exactly one steel pickaxe and nothing else, per the design:
+    /// every lamp, ladder and support must be crafted from gathered materials.
     #[must_use]
     pub fn new(spawn: Vec3, registry: &Registry) -> Self {
         let mut hotbar = [None; 9];
         if let Some(pickaxe) = registry.item_id("steel_pickaxe") {
             hotbar[0] = Some(HotbarSlot { item: pickaxe, count: 1 });
-        }
-        for (i, name) in ["oil_lamp", "ladder", "timber_support"].iter().enumerate() {
-            if let Some(item) = registry.item_id(name) {
-                hotbar[i + 1] = Some(HotbarSlot { item, count: 64 });
-            }
         }
         Self {
             body: BodyState { position: spawn, ..Default::default() },

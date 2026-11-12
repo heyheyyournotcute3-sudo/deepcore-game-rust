@@ -47,6 +47,31 @@ Regenerate RON from the authoring script: `python3 tools/gen_content.py`.
 - Builds are slow here (2 cores): a cold `cargo check --workspace --all-targets` is ~6 min; the
   client binary build was ~17 min the first time. Incremental checks are seconds.
 
+## Review fixes (after M1, before M2)
+
+Four review findings, all fixed:
+
+1. **Starting loadout** — the client filled hotbar slots 1–3 with 64 oil lamps, ladders and
+   timber supports. Now the player starts with exactly one steel pickaxe and nothing else
+   (`LocalPlayer::new`); everything else must be crafted.
+2. **Content gaps** — 18 tech nodes and no entries at all for rails, minecarts, the Mine Lift,
+   cables/poles, conveyors/item pipes, the Scram Panel, or the reactor console / coolant pump /
+   heat exchanger. All of them now exist as RON data (44 machines, 32 tech nodes, 140 recipes),
+   and two new tests pin this down: `every_structure_from_the_design_exists` and
+   `content_meets_the_section_6_targets`. Content counts: 55 blocks, 177 items (132 non-machine),
+   140 recipes, 44 machines, 32 tech nodes, 6 layers.
+3. **Docs vs tree** — README said M0 when M1 had shipped; both README and PLAN pointed at a
+   non-existent `tools/atlas_gen` (the atlas is generated at runtime in
+   `crates/client/src/render/atlas.rs`); `PROMPT.md` was missing from the repo root. All three
+   fixed.
+4. **Repo metadata** — `Cargo.toml` `repository` pointed at the wrong repo; now
+   `deepcore-game-rust`.
+
+Note on Section 6 counts: the item target is "roughly 80–120" and the tree ships 132 non-machine
+items, because every intermediate in the nuclear chain, every hazard counter and every tool is a
+real item. The test asserts 80–140 and the count is recorded here rather than deleting content to
+hit a number.
+
 ## Milestone log
 
 ### M1 — voxel world (local, single process) — DONE

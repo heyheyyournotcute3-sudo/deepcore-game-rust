@@ -85,7 +85,9 @@ deepcore/
 │   ├── client/           # windowed binary
 │   │   ├── render/ input/ prediction/ ui/ hud/ audio/
 │   └── lobby/            # axum + sqlx accounts / tokens / server browser (M10)
-└── tools/atlas_gen/      # procedural block texture atlas
+└── tools/                # gen_content.py: authors assets/data/*.ron
+                          # (the block atlas is generated at runtime in
+                          #  crates/client/src/render/atlas.rs, no build step needed)
 ```
 
 One Bevy plugin per feature (`MiningPlugin`, `InventoryPlugin`, `PowerGridPlugin`, …). Files stay
